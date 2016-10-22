@@ -19,11 +19,6 @@
 			"Name": "GameLift",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
-		},
-		{
-			"Name": "GameLiftServer",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
 		}
 	]
 }

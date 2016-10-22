@@ -1,6 +1,6 @@
 //Copyright 2016 davevillz, https://github.com/davevill
 
-#include "GameLiftServerPrivatePCH.h"
+#include "GameLiftPrivatePCH.h"
 #include "GameLiftServerGameInstance.h"
 #include "GameLiftServerManager.h"
 

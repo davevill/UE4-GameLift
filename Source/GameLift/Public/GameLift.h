@@ -7,7 +7,6 @@
 
 
 
-
 class FGameLiftModule : public IModuleInterface
 {
 public:
@@ -21,3 +20,5 @@ public:
 };
 
 DECLARE_LOG_CATEGORY_EXTERN(GameLiftLog, Log, All);
+
+

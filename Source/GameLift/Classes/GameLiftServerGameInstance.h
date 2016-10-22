@@ -12,7 +12,7 @@
 
 /** This class is optional, the ideal way is to create, initialize and shutdown the GameLiftServerManager object within your own game instance */
 UCLASS()
-class GAMELIFTSERVER_API UGameLiftServerGameInstance : public UGameInstance
+class GAMELIFT_API UGameLiftServerGameInstance : public UGameInstance
 {
 	GENERATED_UCLASS_BODY()
 

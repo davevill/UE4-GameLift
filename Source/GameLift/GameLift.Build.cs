@@ -65,6 +65,7 @@ public class GameLift : ModuleRules
 
 
 		LoadSDK(Target);
+		LoadServerSDK(Target);
 	}
 
 	public bool LoadSDK(TargetInfo Target)
@@ -88,6 +89,40 @@ public class GameLift : ModuleRules
             PrivateIncludePaths.Add(Path.Combine(Prefix, "aws-cpp-sdk-core", "include"));
             PrivateIncludePaths.Add(Path.Combine(Prefix, "aws-cpp-sdk-gamelift", "include"));
         }
+ 
+        return isLibrarySupported;
+    }
+
+	public bool LoadServerSDK(TargetInfo Target)
+    {
+		bool is64bit = (Target.Platform == UnrealTargetPlatform.Win64);
+        bool isLibrarySupported = false;
+        string Prefix = Path.Combine(ThirdPartyPath, "aws-gamelift");
+ 
+        if ((Target.Platform == UnrealTargetPlatform.Win64) || (Target.Platform == UnrealTargetPlatform.Win32))
+        {
+            isLibrarySupported = true;
+ 
+            PublicAdditionalLibraries.Add(Path.Combine(Prefix, "bin", "aws-cpp-sdk-gamelift-server.lib"));
+
+            string ExtraLibPrefix = Path.Combine(Prefix, "gamelift-server-sdk", "3rdParty", "libs", "release");
+
+
+            PublicAdditionalLibraries.Add(Path.Combine(ExtraLibPrefix, "boost_date_time.lib"));
+            PublicAdditionalLibraries.Add(Path.Combine(ExtraLibPrefix, "boost_random.lib"));
+            PublicAdditionalLibraries.Add(Path.Combine(ExtraLibPrefix, "boost_system.lib"));
+            PublicAdditionalLibraries.Add(Path.Combine(ExtraLibPrefix, "sioclient.lib"));
+            PublicAdditionalLibraries.Add(Path.Combine(ExtraLibPrefix, "protobuf.lib"));
+        }
+ 
+        if (isLibrarySupported)
+        {
+            PrivateIncludePaths.Add(Path.Combine(Prefix, "gamelift-server-sdk", "include"));
+
+        }
+
+		//this is so we can macro out code intended for the dedicated server
+		Definitions.Add(string.Format("WITH_GAMELIFT_SERVER={0}", isLibrarySupported ? 1 : 0 ) );
  
         return isLibrarySupported;
     }
