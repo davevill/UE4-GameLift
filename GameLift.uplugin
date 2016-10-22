@@ -1,0 +1,29 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "GameLift",
+	"Description": "AWS GameLift implementation",
+	"Category": "Other",
+	"CreatedBy": "davevillz",
+	"CreatedByURL": "https://github.com/davevill",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"EnabledByDefault": false,
+	"CanContainContent": false,
+	"IsBetaVersion": true,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "GameLift",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "GameLiftServer",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}
