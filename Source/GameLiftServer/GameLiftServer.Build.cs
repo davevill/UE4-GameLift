@@ -20,6 +20,7 @@ public class GameLiftServer : ModuleRules
 
 	public GameLiftServer(TargetInfo Target)
 	{
+
 		
 		PublicIncludePaths.AddRange(
 			new string[]

@@ -20,6 +20,9 @@ class GAMELIFTSERVER_API UGameLiftServerManager : public UObject, public FTickab
 	bool bInitialized;
 
 
+	class FGameLiftServerCallbacks* Callbacks;
+
+
 	UPROPERTY()
 	class UGameInstance* GameInstance;
 
