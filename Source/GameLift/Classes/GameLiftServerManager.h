@@ -13,6 +13,12 @@
 
 
 
+UENUM(BlueprintType)
+enum class EGameLiftPlayerSessionCreationPolicy : uint8
+{
+	AcceptAll,
+	DenyAll
+};
 
 
 
@@ -28,10 +34,15 @@ class GAMELIFT_API UGameLiftServerManager : public UObject, public FTickableGame
 
 	class FGameLiftServerCallbacks* Callbacks;
 
+	/* Unique ID as a string to session id */
+	TMap<FString, FString> PlayerSessions;
 
 	UPROPERTY()
 	class UGameInstance* GameInstance;
 
+
+	UFUNCTION()
+	void RequestExit();
 
 public:
 
@@ -58,9 +69,8 @@ public:
 	  * The default implementations loads the map defined in the "map" property, with max players and game mode */
 	virtual void OnStartGameSession(const FGameLiftGameSession& GameSession);
 
+	/** Called when GameLift service needs to force the server process to terminate, allowing the server process to shut down gracefully */
 	virtual void OnProcessTerminate();
-
-	virtual bool OnHealthCheck();
 
 
 	/** Global getter */
@@ -71,7 +81,11 @@ public:
 	/** This should be called within the GameMode::PreLogin method passing both Options and ErrorMessage.
 	  * it functions in the same way, if ErrorMessage is set, it means player was rejected or/and if it returns false.*/
 	UFUNCTION(BlueprintCallable, Category="GameLift")
-	bool AcceptPlayerSession(const FString& Options, FString& ErrorMessage);
+	bool AcceptPlayerSession(const FString& Options, const FUniqueNetIdRepl& UniqueNetId, FString& ErrorMessage);
+
+	/** Should be called when a player disconnects from the server */
+	UFUNCTION(BlueprintCallable, Category="GameLift")
+	void RemovePlayerSession(const FUniqueNetIdRepl& UniqueId);
 
 	/** Activates the game session */
 	UFUNCTION(BlueprintCallable, Category="GameLift")
@@ -85,5 +99,11 @@ public:
 	/** Notifies GameLift Service that the server is imediatetly ending/exiting, this calls QuitGame internally */
 	UFUNCTION(BlueprintCallable, Category="GameLift")
 	void ProcessEnding();
+
+	UFUNCTION(BlueprintCallable, Category="GameLift")
+	void ProcessReady();
+
+	UFUNCTION(BlueprintCallable, Category="GameLift")
+	void UpdatePlayerSessionCreationPolicy(EGameLiftPlayerSessionCreationPolicy Policy);
 
 };
