@@ -145,10 +145,10 @@ void UGameLiftServerManager::Init()
 	{
 		Aws::GameLift::Server::InitSDKOutcome InitOutcome = Aws::GameLift::Server::InitSDK();
 
-		ProcessReady();
-
 		UE_LOG(GameLiftLog, Log, TEXT("Gamelift Server initialized successfully"));
 		bInitialized = true;
+
+		ProcessReady();
 	}
 
 	if (bInitialized == false)
@@ -379,7 +379,7 @@ void UGameLiftServerManager::ProcessEnding()
 
 void UGameLiftServerManager::UpdatePlayerSessionCreationPolicy(EGameLiftPlayerSessionCreationPolicy Policy)
 {
-	Aws::GameLift::Server::Model::PlayerSessionCreationPolicy NewPolicy;
+	Aws::GameLift::Server::Model::PlayerSessionCreationPolicy NewPolicy = Aws::GameLift::Server::Model::PlayerSessionCreationPolicy::ACCEPT_ALL;
 
 	switch (Policy)
 	{
