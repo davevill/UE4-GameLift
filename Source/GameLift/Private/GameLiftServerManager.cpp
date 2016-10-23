@@ -162,7 +162,7 @@ void UGameLiftServerManager::ProcessReady()
 {
 	ensure(bInitialized);
 	ensure(bGameSessionActive == false);
-	if (bInitialized && bGameSessionActive)
+	if (bInitialized && bGameSessionActive == false)
 	{
 		const int32 Port = FURL::UrlConfig.DefaultPort;
 
