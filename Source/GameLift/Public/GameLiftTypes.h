@@ -19,16 +19,31 @@ struct FGameLiftProperty
 	GENERATED_USTRUCT_BODY();
 public:
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadWrite)
 	FName Key;
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadWrite)
 	FString Value;
 
 
 };
 
+USTRUCT(BlueprintType)
+struct FGameLiftPlayerSession
+{
+	GENERATED_USTRUCT_BODY();
+public:
 
+	UPROPERTY(BlueprintReadOnly)
+	FString PlayerSessionId;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString GameSessionId;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString PlayerId;
+
+};
 
 
 USTRUCT(BlueprintType)
@@ -45,5 +60,11 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	int32 MaxPlayers;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString IpAddress;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 Port;
 
 };

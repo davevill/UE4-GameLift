@@ -26,6 +26,17 @@ public:
 	UFUNCTION(Category = "GameLift", BlueprintCallable, meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"))
 	static FString GetGameProperty(UObject* WorldContextObject, const FGameLiftGameSession& GameSession, FName Key);
 
+	/** Formats the host to connect which is ip:port */
+	UFUNCTION(Category = "GameLift", BlueprintPure, meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"))
+	static FString GetConnectHost(UObject* WorldContextObject, const FGameLiftGameSession& GameSession);
+
+	/** Formats the full connect command */
+	UFUNCTION(Category = "GameLift", BlueprintPure, meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"))
+	static FString GetConnectCommand(UObject* WorldContextObject, const FString& Host, const FString& PlayerSessionId);
+
+	/** Connects to a GameLift Server */
+	UFUNCTION(Category = "GameLift", BlueprintCallable, meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"))
+	static void Connect(UObject* WorldContextObject, const FString& Host, const FString& PlayerSessionId);
 
 
 

@@ -360,7 +360,7 @@ void UGameLiftServerManager::TerminateGameSession()
 		bGameSessionActive = false;
 		
 		//Loads the default map
-		UGameplayStatics::OpenLevel(this, "Entry", true);
+		UGameplayStatics::OpenLevel(this, "ServerIdle", true);
 
 		ProcessReady();
 	}

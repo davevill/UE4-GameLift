@@ -19,3 +19,19 @@ FString UGameLiftStatics::GetGameProperty(UObject* WorldContextObject, const FGa
 
 	return FString();
 }
+
+FString UGameLiftStatics::GetConnectHost(UObject* WorldContextObject, const FGameLiftGameSession& GameSession)
+{
+	return FString::Printf(TEXT("%s:%d"), *GameSession.IpAddress, GameSession.Port);
+}
+
+FString UGameLiftStatics::GetConnectCommand(UObject* WorldContextObject, const FString& Host, const FString& PlayerSessionId)
+{
+	return FString::Printf(TEXT("open %s?%s=%s"), *Host, GAMELIFT_URL_PLAYER_SESSION_ID, *PlayerSessionId);
+}
+
+void UGameLiftStatics::Connect(UObject* WorldContextObject, const FString& Host, const FString& PlayerSessionId)
+{
+	WorldContextObject->GetWorld()->GetFirstPlayerController()->ConsoleCommand(GetConnectCommand(WorldContextObject, Host, PlayerSessionId));	
+}
+

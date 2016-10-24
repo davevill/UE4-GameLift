@@ -82,6 +82,8 @@ public class GameLift : ModuleRules
             PublicAdditionalLibraries.Add(Path.Combine(Prefix, "aws-cpp-sdk-gamelift", "Release", "aws-cpp-sdk-gamelift.lib")); 
             PublicAdditionalLibraries.Add("bcrypt.lib"); 
             PublicAdditionalLibraries.Add("Winhttp.lib"); 
+            PublicAdditionalLibraries.Add("version.lib"); 
+            PublicAdditionalLibraries.Add("userenv.lib"); 
         }
  
         if (isLibrarySupported)

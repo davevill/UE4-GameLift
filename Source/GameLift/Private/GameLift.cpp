@@ -2,23 +2,22 @@
 
 
 #include "GameLiftPrivatePCH.h"
-#include <aws/core/Aws.h>
 
 #define LOCTEXT_NAMESPACE "FGameLiftModule"
+#include <aws/core/Aws.h>
 
 
 
+Aws::SDKOptions GAWSOptions;
 
 void FGameLiftModule::StartupModule()
 {
-	Aws::SDKOptions Options;
-	Aws::InitAPI(Options);
-
-	Aws::ShutdownAPI(Options);
+	Aws::InitAPI(GAWSOptions);
 }
 
 void FGameLiftModule::ShutdownModule()
 {
+	Aws::ShutdownAPI(GAWSOptions);
 }
 
 #undef LOCTEXT_NAMESPACE

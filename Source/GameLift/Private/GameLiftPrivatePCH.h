@@ -9,3 +9,4 @@
 
 /** The key for the connect/open URL options to store the session id */
 #define GAMELIFT_URL_PLAYER_SESSION_ID TEXT("psid")
+
