@@ -11,33 +11,6 @@
 
 
 
-UENUM(BlueprintType)
-enum class EGameLiftRegion : uint8
-{
-	USEast1,
-	USWest2,
-	AsiaPacific1, //ap-northeast-1
-	EUWest1,
-};
-
-
-USTRUCT(BlueprintType)
-struct FGameLiftFleet
-{
-	GENERATED_USTRUCT_BODY()
-
-	UPROPERTY(BlueprintReadWrite)
-	FName Id;
-
-	/** Is this an alias? */
-	UPROPERTY(BlueprintReadWrite)
-	bool bAlias;
-
-	UPROPERTY(BlueprintReadWrite)
-	EGameLiftRegion Region;
-
-};
-
 
 
 

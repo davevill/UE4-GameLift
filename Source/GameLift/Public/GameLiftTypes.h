@@ -19,10 +19,10 @@ struct FGameLiftProperty
 	GENERATED_USTRUCT_BODY();
 public:
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	FName Key;
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	FString Value;
 
 
@@ -66,5 +66,32 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	int32 Port;
+
+};
+
+UENUM(BlueprintType)
+enum class EGameLiftRegion : uint8
+{
+	USEast1,
+	USWest2,
+	AsiaPacific1, //ap-northeast-1
+	EUWest1,
+};
+
+
+USTRUCT(BlueprintType)
+struct FGameLiftFleet
+{
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	FName Id;
+
+	/** Is this an alias? */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool bAlias;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	EGameLiftRegion Region;
 
 };
