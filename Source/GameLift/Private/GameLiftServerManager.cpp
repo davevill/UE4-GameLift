@@ -284,12 +284,12 @@ bool UGameLiftServerManager::AcceptPlayerSession(const FString& Options, const F
 
 		const FString UniqueIdStr = UniqueId.ToString();
 
-		const FString* pPlayerSessionId = PlayerSessions.Find(UniqueId.ToString());
+		const FString* pPlayerSessionId = PlayerSessions.Find(UniqueIdStr);
 
 		if (pPlayerSessionId)
 		{
 			UE_LOG(GameLiftLog, Warning, TEXT("GameLift AcceptPlayerSession UniqueId %s is already in the server, droping connection"), *UniqueIdStr);
-			return;
+			return false;
 		}
 		
 		FString& SavedSessionId = PlayerSessions.Add(UniqueIdStr);
