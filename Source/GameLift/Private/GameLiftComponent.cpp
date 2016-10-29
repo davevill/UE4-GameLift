@@ -2,6 +2,10 @@
 
 #include "GameLiftPrivatePCH.h"
 #include "GameLiftComponent.h"
+#define _HAS_EXCEPTIONS 0
+#pragma warning( push )
+#pragma warning( disable : 4530)
+
 #include <aws/core/Aws.h>
 #include <aws/gameLift/GameLiftClient.h>
 #include <aws/gameLift/model/CreateGameSessionRequest.h>
@@ -14,6 +18,11 @@
 #include <aws/gameLift/model/CreatePlayerSessionsResult.h>
 #include <aws/core/auth/AWSCredentialsProvider.h>
 #include <aws/core/utils/Outcome.h>
+
+
+
+#pragma warning( pop )
+
 #include "GameLiftTaskManager.h"
 
 

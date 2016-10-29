@@ -44,7 +44,15 @@ class GAMELIFT_API UGameLiftServerManager : public UObject, public FTickableGame
 	UFUNCTION()
 	void RequestExit();
 
+
 public:
+
+
+	/** How long has the game session being active, server time */
+	UPROPERTY(BlueprintReadOnly, Category="GameLift")
+	float GameSessionDuration;
+
+
 
 	UGameLiftServerManager();
 

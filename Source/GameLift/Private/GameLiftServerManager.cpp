@@ -117,6 +117,11 @@ void UGameLiftServerManager::Tick(float DeltaTime)
 	if (bInitialized && Callbacks)
 	{
 		Callbacks->PollEvents();
+
+		if (bGameSessionActive)
+		{
+			GameSessionDuration += DeltaTime;
+		}
 	}
 }
 
@@ -327,6 +332,7 @@ bool UGameLiftServerManager::ActivateGameSession()
 	UE_LOG(GameLiftLog, Log, TEXT("GameLift Activating Game Session"));
 
 	bGameSessionActive = Outcome.IsSuccess();
+	GameSessionDuration = 0.f;
 
 	return Outcome.IsSuccess();
 }
