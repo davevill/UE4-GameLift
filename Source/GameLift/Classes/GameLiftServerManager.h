@@ -82,7 +82,7 @@ public:
 
 
 	/** Global getter */
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get GameLiftServer", WorldContext = "WorldContextObject"), Category = "GameLift")
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get GameLift Server Manager", WorldContext = "WorldContextObject"), Category = "GameLift")
 	static UGameLiftServerManager* Get(UObject* WorldContextObject);
 
 
