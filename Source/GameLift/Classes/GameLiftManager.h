@@ -7,9 +7,13 @@
 #include "Object.h"
 #include "Tickable.h"
 #include "GameLiftTypes.h"
-#include "GameliftServerManager.generated.h"
+#include "GameLiftManager.generated.h"
 
 
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FGameLiftOnCreateGameSessionDelegate, bool, bSucceed, const FGameLiftGameSession&, GameSession);
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FGameLiftOnCreatePlayerSessionsDelegate, bool, bSucceed, const TArray<FGameLiftPlayerSession>&, PlayerSessions);
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FGameLiftOnSearchGameSessionsDelegate, bool, bSucceed, const TArray<FGameLiftGameSession>&, GameSessions);
 
 
 
@@ -24,7 +28,7 @@ enum class EGameLiftPlayerSessionCreationPolicy : uint8
 
 /* Must be created from within a GameInstance object otherwise it wont initialize */
 UCLASS(Config=Game)
-class GAMELIFT_API UGameLiftServerManager : public UObject, public FTickableGameObject
+class GAMELIFT_API UGameLiftManager : public UObject, public FTickableGameObject
 {
 	GENERATED_BODY()
 
@@ -45,6 +49,20 @@ class GAMELIFT_API UGameLiftServerManager : public UObject, public FTickableGame
 	void RequestExit();
 
 
+	//Client properties
+
+	UPROPERTY(Config)
+	FString AccessKeyId;
+
+	UPROPERTY(Config)
+	FString SecretAccessKey;
+
+	UPROPERTY(Config)
+	bool bCognitoEnabled;
+
+	// we dont expose any direct aws stuff
+	class TSharedPtr<class FGameLiftPrivate> Pvt;
+
 public:
 
 
@@ -52,13 +70,17 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category="GameLift")
 	float GameSessionDuration;
 
+	/** The current region for client operations */
+	UPROPERTY(BlueprintReadWrite, Category="GameLift")
+	EGameLiftRegion Region;
 
 
-	UGameLiftServerManager();
+
+	UGameLiftManager();
 
 
 	virtual void Tick(float DeltaTime) override;
-	virtual bool IsTickable() const override { return bInitialized; }
+	virtual bool IsTickable() const override;
 	virtual TStatId GetStatId() const override { return UObject::GetStatID(); }
 
 
@@ -81,9 +103,15 @@ public:
 	virtual void OnProcessTerminate();
 
 
+
+	/** Return true if this is running on AWS GameLift fleet */
+	UFUNCTION(BlueprintPure, Category="GameLift")
+	bool IsFleetInstance() const;
+
+
 	/** Global getter */
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get GameLift Server Manager", WorldContext = "WorldContextObject"), Category = "GameLift")
-	static UGameLiftServerManager* Get(UObject* WorldContextObject);
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get GameLift Manager", WorldContext = "WorldContextObject"), Category = "GameLift")
+	static UGameLiftManager* Get(UObject* WorldContextObject);
 
 
 	/** This should be called within the GameMode::PreLogin method passing both Options and ErrorMessage.
@@ -113,5 +141,29 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="GameLift")
 	void UpdatePlayerSessionCreationPolicy(EGameLiftPlayerSessionCreationPolicy Policy);
+
+
+
+
+
+
+
+
+	/** Client: Creates a game session  */
+	UFUNCTION(BlueprintCallable, Category="GameLift")
+	void CreateGameSession(int32 MaxPlayers, TArray<FGameLiftProperty> GameProperties, FGameLiftFleet Fleet, const FGameLiftOnCreateGameSessionDelegate& Callback);
+
+
+	/** Client: Creates player sessions, can be used for a single one */
+	UFUNCTION(BlueprintCallable, Category="GameLift")
+	void CreatePlayerSessions(const FString& GameSessionId, const TArray<FString>& PlayerIds, const FGameLiftOnCreatePlayerSessionsDelegate& Callback);
+
+	/** Client: Search for game sessions */
+	UFUNCTION(BlueprintCallable, Category="GameLift")
+	void SearchGameSessions(const FString& FilterExpression, const FString& SortExpression, FGameLiftFleet Fleet, const FGameLiftOnSearchGameSessionsDelegate& Callback);
+
+
+
+
 
 };
