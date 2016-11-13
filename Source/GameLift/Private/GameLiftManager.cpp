@@ -197,7 +197,7 @@ void UGameLiftManager::Tick(float DeltaTime)
 
 bool UGameLiftManager::IsTickable() const
 {
-	return Pvt->TaskManager->GetTaskNum() > 0;
+	return (Pvt->TaskManager->GetTaskNum() > 0) || bInitialized;
 }
 
 void UGameLiftManager::Init()
