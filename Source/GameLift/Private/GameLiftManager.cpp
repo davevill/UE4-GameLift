@@ -520,6 +520,14 @@ static void AWSGameSessionToUnreal(const Aws::GameLift::Model::GameSession& AWSG
 
 	GameSession.IpAddress = AWSGameSession.GetIpAddress().c_str();
 	GameSession.Port = AWSGameSession.GetPort();
+
+	GameSession.PlayerSessionCreationPolicy = EGameLiftPlayerSessionCreationPolicy::AcceptAll;
+
+	switch (AWSGameSession.GetPlayerSessionCreationPolicy())
+	{
+	case Aws::GameLift::Model::PlayerSessionCreationPolicy::ACCEPT_ALL: GameSession.PlayerSessionCreationPolicy = EGameLiftPlayerSessionCreationPolicy::AcceptAll; break;
+	case Aws::GameLift::Model::PlayerSessionCreationPolicy::DENY_ALL:   GameSession.PlayerSessionCreationPolicy = EGameLiftPlayerSessionCreationPolicy::DenyAll; break;
+	}
 }
 
 
@@ -710,6 +718,8 @@ public:
 	Aws::GameLift::Model::SearchGameSessionsRequest Request;
 	Aws::GameLift::Model::SearchGameSessionsOutcome Outcome;
 
+	bool bOnlyAcceptingPlayers;
+
 	FGameLiftOnSearchGameSessionsDelegate Callback;
 
 	void DoWork()
@@ -735,6 +745,11 @@ public:
 
 				AWSGameSessionToUnreal(AWSGameSessions[i], GameSession);
 
+				if (bOnlyAcceptingPlayers && GameSession.PlayerSessionCreationPolicy != EGameLiftPlayerSessionCreationPolicy::AcceptAll)
+				{
+					continue;
+				}
+
 				GameSessions.Add(GameSession);
 			}
 		}
@@ -747,7 +762,7 @@ public:
 	};
 };
 
-void UGameLiftManager::SearchGameSessions(const FString& FilterExpression, const FString& SortExpression, FGameLiftFleet Fleet, const FGameLiftOnSearchGameSessionsDelegate& Callback)
+void UGameLiftManager::SearchGameSessions(const FString& FilterExpression, const FString& SortExpression, bool bOnlyAcceptingPlayers, FGameLiftFleet Fleet, const FGameLiftOnSearchGameSessionsDelegate& Callback)
 {
 	FGameLiftSearchGameSessionsTaskWork* TaskWork = new FGameLiftSearchGameSessionsTaskWork();
 	TaskWork->Callback = Callback;
@@ -757,6 +772,7 @@ void UGameLiftManager::SearchGameSessions(const FString& FilterExpression, const
 	TaskWork->Client = Aws::GameLift::GameLiftClient(Pvt->Credentials, ClientConfiguration);
 	TaskWork->Request.SetFilterExpression(TCHAR_TO_ANSI(*FilterExpression));
 	TaskWork->Request.SetSortExpression(TCHAR_TO_ANSI(*SortExpression));
+	TaskWork->bOnlyAcceptingPlayers = bOnlyAcceptingPlayers;
 
 	if (Fleet.bAlias)
 	{

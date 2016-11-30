@@ -45,6 +45,13 @@ public:
 
 };
 
+UENUM(BlueprintType)
+enum class EGameLiftPlayerSessionCreationPolicy : uint8
+{
+	AcceptAll,
+	DenyAll
+};
+
 
 USTRUCT(BlueprintType)
 struct FGameLiftGameSession
@@ -66,6 +73,9 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	int32 Port;
+
+	UPROPERTY(BlueprintReadOnly)
+	EGameLiftPlayerSessionCreationPolicy PlayerSessionCreationPolicy;
 
 };
 

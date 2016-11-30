@@ -17,12 +17,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(FGameLiftOnSearchGameSessionsDelegate, bool, 
 
 
 
-UENUM(BlueprintType)
-enum class EGameLiftPlayerSessionCreationPolicy : uint8
-{
-	AcceptAll,
-	DenyAll
-};
 
 
 
@@ -158,9 +152,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="GameLift")
 	void CreatePlayerSessions(const FString& GameSessionId, const TArray<FString>& PlayerIds, const FGameLiftOnCreatePlayerSessionsDelegate& Callback);
 
-	/** Client: Search for game sessions */
+	/** Client: Search for game sessions, if bOnlyAcceptingPlayers is true, will flter all game sessions with Policy != ACCEPT_ALL */
 	UFUNCTION(BlueprintCallable, Category="GameLift")
-	void SearchGameSessions(const FString& FilterExpression, const FString& SortExpression, FGameLiftFleet Fleet, const FGameLiftOnSearchGameSessionsDelegate& Callback);
+	void SearchGameSessions(const FString& FilterExpression, const FString& SortExpression, bool bOnlyAcceptingPlayers, FGameLiftFleet Fleet, const FGameLiftOnSearchGameSessionsDelegate& Callback);
 
 
 
