@@ -137,6 +137,7 @@ public:
 		case EGameLiftRegion::USWest2:      RegionStr = Aws::Region::US_WEST_2; break;
 		case EGameLiftRegion::AsiaPacific1: RegionStr = Aws::Region::AP_NORTHEAST_1; break;
 		case EGameLiftRegion::EUWest1:      RegionStr = Aws::Region::EU_WEST_1; break;
+		case EGameLiftRegion::EUCentral1:   RegionStr = Aws::Region::EU_CENTRAL_1; break;
 		};
 
 		ClientConfiguration.region = RegionStr;
@@ -336,6 +337,16 @@ void UGameLiftManager::OnStartGameSession(const FGameLiftGameSession& GameSessio
 
 	Url.AddOption(TEXT("listen"));
 	Url.AddOption(*FString::Printf(TEXT("maxPlayers=%d"), GameSession.MaxPlayers));
+
+	//TODO add an interface to build the open URL
+	for (int32 i = 0; i < GameSession.Properties.Num(); i++)
+	{
+		const FGameLiftProperty& Property = GameSession.Properties[i];
+
+		Url.AddOption(*FString::Printf(TEXT("%s=%s"), *Property.Value));
+	}
+
+	UE_LOG(GameLiftLog, Log, TEXT("GameLift::Server Starting Game Session with URL = %s"), *Url.ToString());
 
 	//Clear the player session id map
 	PlayerSessions.Empty();

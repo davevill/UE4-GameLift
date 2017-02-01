@@ -86,6 +86,7 @@ enum class EGameLiftRegion : uint8
 	USWest2,
 	AsiaPacific1, //ap-northeast-1
 	EUWest1,
+	EUCentral1,
 };
 
 
