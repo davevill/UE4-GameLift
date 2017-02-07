@@ -34,9 +34,9 @@ public:
 	UFUNCTION(Category = "GameLift", BlueprintPure, meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"))
 	static FString GetConnectCommand(UObject* WorldContextObject, const FString& Host, const FString& PlayerSessionId);
 
-	/** Connects to a GameLift Server */
+	/** Connects to a GameLift Server, optionally appending extra options (must contain ?, ie: ?myparam=1?myparam2=0) */
 	UFUNCTION(Category = "GameLift", BlueprintCallable, meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"))
-	static void Connect(UObject* WorldContextObject, const FString& Host, const FString& PlayerSessionId);
+	static void Connect(UObject* WorldContextObject, const FString& Host, const FString& PlayerSessionId, const FString& ExtraOptions = "");
 
 
 

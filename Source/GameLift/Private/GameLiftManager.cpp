@@ -333,26 +333,34 @@ void UGameLiftManager::OnStartGameSession(const FGameLiftGameSession& GameSessio
 
 	//TODO FIX ME use a map whitelist and pretty much everything that is stored in game properties
 
-	FURL Url;
 
-	Url.AddOption(TEXT("listen"));
-	Url.AddOption(*FString::Printf(TEXT("maxPlayers=%d"), GameSession.MaxPlayers));
+	FString Url;
+
+	Url += TEXT("?listen");
+	Url += FString::Printf(TEXT("?maxPlayers=%d"), GameSession.MaxPlayers);
 
 	//TODO add an interface to build the open URL
 	for (int32 i = 0; i < GameSession.Properties.Num(); i++)
 	{
 		const FGameLiftProperty& Property = GameSession.Properties[i];
 
-		Url.AddOption(*FString::Printf(TEXT("%s=%s"), *Property.Value));
+		if (Property.Key == GAMELIFT_PROPERTY_MAP) continue;
+
+		if (Property.Key == NAME_None || Property.Value.IsEmpty()) continue;
+
+		Url += "?";
+		Url += Property.Key.ToString();
+		Url += "=";
+		Url += Property.Value;
 	}
 
-	UE_LOG(GameLiftLog, Log, TEXT("GameLift::Server Starting Game Session with URL = %s"), *Url.ToString());
+	UE_LOG(GameLiftLog, Log, TEXT("GameLift::Server Starting Game Session with URL = %s"), *Url);
 
 	//Clear the player session id map
 	PlayerSessions.Empty();
 
 	//This is a blocking call
-	UGameplayStatics::OpenLevel(this, *MapName, true, Url.ToString());
+	UGameplayStatics::OpenLevel(this, *MapName, true, Url);
 
 
 	bGameSessionActive = false;

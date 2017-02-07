@@ -30,8 +30,8 @@ FString UGameLiftStatics::GetConnectCommand(UObject* WorldContextObject, const F
 	return FString::Printf(TEXT("open %s?%s=%s"), *Host, GAMELIFT_URL_PLAYER_SESSION_ID, *PlayerSessionId);
 }
 
-void UGameLiftStatics::Connect(UObject* WorldContextObject, const FString& Host, const FString& PlayerSessionId)
+void UGameLiftStatics::Connect(UObject* WorldContextObject, const FString& Host, const FString& PlayerSessionId, const FString& ExtraOptions)
 {
-	WorldContextObject->GetWorld()->GetFirstPlayerController()->ConsoleCommand(GetConnectCommand(WorldContextObject, Host, PlayerSessionId));	
+	WorldContextObject->GetWorld()->GetFirstPlayerController()->ConsoleCommand(GetConnectCommand(WorldContextObject, Host, PlayerSessionId) + ExtraOptions);	
 }
 
