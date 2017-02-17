@@ -7,7 +7,7 @@
 
 
 
-#define _HAS_EXCEPTIONS 0
+//#define _HAS_EXCEPTIONS 0
 #pragma warning( push )
 #pragma warning( disable : 4530)
 #include <aws/core/Aws.h>

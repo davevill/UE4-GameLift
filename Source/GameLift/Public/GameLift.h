@@ -4,7 +4,7 @@
 
 #include "ModuleManager.h"
 
-
+#define _GLIBCXX_FULLY_DYNAMIC_STRING 0 
 
 
 class FGameLiftModule : public IModuleInterface

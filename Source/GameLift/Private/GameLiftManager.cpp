@@ -5,7 +5,7 @@
 #include "GameLiftStatics.h"
 
 
-#define _HAS_EXCEPTIONS 0
+//#define _HAS_EXCEPTIONS 0
 #pragma warning( push )
 #pragma warning( disable : 4530)
 
@@ -23,6 +23,7 @@
 #include <aws/gameLift/model/CreatePlayerSessionsResult.h>
 #include <aws/core/auth/AWSCredentialsProvider.h>
 #include <aws/core/utils/Outcome.h>
+#include <aws/gamelift/GameLiftErrors.h>
 
 #pragma warning( pop ) 
 
@@ -605,7 +606,7 @@ public:
 		}
 		else
 		{
-			UE_LOG(GameLiftLog, Warning, TEXT("GameLift CreateGameSession failed: %s"), *FString(Outcome.GetError().GetMessageW().c_str()));
+			UE_LOG(GameLiftLog, Warning, TEXT("GameLift CreateGameSession failed: %s"), *FString(Outcome.GetError().GetMessage().c_str()));
 		}
 
 		Callback.ExecuteIfBound(bSucceed, GameSession);
@@ -692,7 +693,7 @@ public:
 		}
 		else
 		{
-			UE_LOG(GameLiftLog, Warning, TEXT("GameLift CreatePlayerSessions failed: %s"), *FString(Outcome.GetError().GetMessageW().c_str()));
+			UE_LOG(GameLiftLog, Warning, TEXT("GameLift CreatePlayerSessions failed: %s"), *FString(Outcome.GetError().GetMessage().c_str()));
 		}
 
 
@@ -774,7 +775,7 @@ public:
 		}
 		else
 		{
-			UE_LOG(GameLiftLog, Warning, TEXT("GameLift SearchGameSessions failed: %s"), *FString(Outcome.GetError().GetMessageW().c_str()));
+			UE_LOG(GameLiftLog, Warning, TEXT("GameLift SearchGameSessions failed: %s"), *FString(Outcome.GetError().GetMessage().c_str()));
 		}
 
 		Callback.ExecuteIfBound(bSucceed, GameSessions);
