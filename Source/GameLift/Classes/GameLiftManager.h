@@ -57,6 +57,7 @@ class GAMELIFT_API UGameLiftManager : public UObject, public FTickableGameObject
 	// we dont expose any direct aws stuff
 	class TSharedPtr<class FGameLiftPrivate> Pvt;
 
+
 public:
 
 
@@ -119,7 +120,7 @@ public:
 
 	/** Activates the game session */
 	UFUNCTION(BlueprintCallable, Category="GameLift")
-	bool ActivateGameSession();
+	void ActivateGameSession();
 
 	/** Termintes the game session, ProcessEnding should be called if the server needs to be restarted, 
 	  * otherwise it will inmediatly be available to host new game sessions */

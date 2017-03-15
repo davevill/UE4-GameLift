@@ -230,14 +230,14 @@ void UGameLiftManager::Init()
 		UE_LOG(GameLiftLog, Log, TEXT("Gamelift Server initialized successfully"));
 		bInitialized = true;
 
-		ProcessReady();
+		FTimerHandle Handle;
+		GetWorld()->GetTimerManager().SetTimer(Handle, this, &UGameLiftManager::ProcessReady, 10.f, false);
 	}
 
 	if (bInitialized == false)
 	{
 		UE_LOG(GameLiftLog, Log, TEXT("Gamelift Server didn't initialized or its disabled"));
 	}
-
 
 	Pvt->Credentials.SetAWSAccessKeyId(TCHAR_TO_ANSI(*AccessKeyId));
 	Pvt->Credentials.SetAWSSecretKey(TCHAR_TO_ANSI(*SecretAccessKey));
@@ -360,13 +360,11 @@ void UGameLiftManager::OnStartGameSession(const FGameLiftGameSession& GameSessio
 	//Clear the player session id map
 	PlayerSessions.Empty();
 
-	//This is a blocking call
+	bGameSessionActive = false;
 	UGameplayStatics::OpenLevel(this, *MapName, true, Url);
 
 
-	bGameSessionActive = false;
-
-	ActivateGameSession();
+	GetWorld()->GetTimerManager().SetTimerForNextTick(this, &UGameLiftManager::ActivateGameSession);
 }
 
 bool UGameLiftManager::AcceptPlayerSession(const FString& Options, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
@@ -428,18 +426,16 @@ void UGameLiftManager::RemovePlayerSession(const FUniqueNetIdRepl& UniqueId)
 	PlayerSessions.Remove(UniqueIdStr);
 }
 
-bool UGameLiftManager::ActivateGameSession()
+void UGameLiftManager::ActivateGameSession()
 {
 	ensure(bGameSessionActive == false);
-	if (bGameSessionActive) return false;
+	if (bGameSessionActive) return;
 
 	Aws::GameLift::GenericOutcome Outcome = Aws::GameLift::Server::ActivateGameSession();
 	UE_LOG(GameLiftLog, Log, TEXT("GameLift Activating Game Session"));
 
 	bGameSessionActive = Outcome.IsSuccess();
 	GameSessionDuration = 0.f;
-
-	return Outcome.IsSuccess();
 }
 
 void UGameLiftManager::OnProcessTerminate()
@@ -482,7 +478,8 @@ void UGameLiftManager::TerminateGameSession()
 		//Loads the default map
 		UGameplayStatics::OpenLevel(this, "ServerIdle", true);
 
-		ProcessReady();
+		FTimerHandle Handle;
+		GetWorld()->GetTimerManager().SetTimer(Handle, this, &UGameLiftManager::ProcessReady, 5.f, false);
 	}
 }
 
@@ -540,6 +537,7 @@ static void AWSGameSessionToUnreal(const Aws::GameLift::Model::GameSession& AWSG
 
 	GameSession.IpAddress = AWSGameSession.GetIpAddress().c_str();
 	GameSession.Port = AWSGameSession.GetPort();
+	GameSession.Players = AWSGameSession.GetCurrentPlayerSessionCount();
 
 	GameSession.PlayerSessionCreationPolicy = EGameLiftPlayerSessionCreationPolicy::AcceptAll;
 
@@ -573,8 +571,8 @@ public:
 
 			DescribeRequest.SetGameSessionId(Outcome.GetResult().GetGameSession().GetGameSessionId());
 
-			//wait 30 seconds for the game session to be active
-			for (int32 i = 0; i < 30; i++)
+			//wait 120 seconds for the game session to be active
+			for (int32 i = 0; i < 10; i++)
 			{
 				Aws::GameLift::Model::DescribeGameSessionsOutcome ActivateOutcome = Client.DescribeGameSessions(DescribeRequest);
 
@@ -586,8 +584,11 @@ public:
 					}
 				}
 
-				FPlatformProcess::Sleep(1.f);
+				FPlatformProcess::Sleep(5.f);
 			}
+
+			//Then wait 5 seconds for it to be fully available
+			FPlatformProcess::Sleep(1.f);
 		}
 	}
 

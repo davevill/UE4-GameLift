@@ -69,6 +69,9 @@ public:
 	int32 MaxPlayers;
 
 	UPROPERTY(BlueprintReadOnly)
+	int32 Players;
+
+	UPROPERTY(BlueprintReadOnly)
 	FString IpAddress;
 
 	UPROPERTY(BlueprintReadOnly)
