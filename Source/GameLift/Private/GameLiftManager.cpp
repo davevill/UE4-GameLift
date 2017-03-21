@@ -3,6 +3,7 @@
 #include "GameLiftPrivatePCH.h"
 #include "GameLiftManager.h"
 #include "GameLiftStatics.h"
+#include "Async.h"
 
 
 //#define _HAS_EXCEPTIONS 0
@@ -10,8 +11,8 @@
 #pragma warning( disable : 4530)
 #pragma warning( disable : 4996)
 
-//#include "aws/gamelift/server/GameLiftServerAPI.h"
 
+#if WITH_GAMELIFT
 
 #if PLATFORM_WINDOWS
 #include "AllowWindowsPlatformTypes.h"
@@ -32,38 +33,10 @@
 
 #pragma warning( pop ) 
 
+
+
+
 #include "GameLiftTaskManager.h"
-
-
-
-
-#define GAMELIFT_EVENT_ON_START_GAME_SESSION 1
-#define GAMELIFT_EVENT_ON_PROCESS_TERMINATE 2
-
-
-
-class FGameLiftServerCallbacks
-{
-
-	TWeakObjectPtr<UGameLiftManager> Manager;
-
-	Aws::GameLift::Server::Model::GameSession StoredGameSession;
-
-	TQueue<int32> EventQueue;
-
-public:
-
-	FGameLiftServerCallbacks(UGameLiftManager* Owner) :
-		Manager(Owner)
-	{
-	}
-
-	void PollEvents()
-	{
-		//deprecated
-	}
-
-};
 
 
 void OnActivateFunctionInternal(Aws::GameLift::Server::Model::GameSession GameSession, void* State)
@@ -92,7 +65,10 @@ void OnActivateFunctionInternal(Aws::GameLift::Server::Model::GameSession GameSe
 		UnrealGameSession.Properties.Add(UnrealProperty);
 	}
 
-	Manager->OnStartGameSession(UnrealGameSession);
+	AsyncTask(ENamedThreads::GameThread, [=]()
+	{
+		Manager->OnStartGameSession(UnrealGameSession);
+	});
 }
 
 void OnTerminateFunctionInternal(void* State)
@@ -100,7 +76,10 @@ void OnTerminateFunctionInternal(void* State)
 	UGameLiftManager* Manager = (UGameLiftManager*)State;
 	check(Manager);
 
-	Manager->OnProcessTerminate();
+	AsyncTask(ENamedThreads::GameThread, [=]()
+	{
+		Manager->OnProcessTerminate();
+	});
 }
 
 bool OnHealthCheckInternal(void* State)
@@ -109,33 +88,7 @@ bool OnHealthCheckInternal(void* State)
 }
 
 
-
-class FGameLiftPrivate
-{
-public:
-
-	TSharedPtr<FGameLiftTaskManager> TaskManager;
-
-};
-
-
-
-class FGameLiftAPITaskWork : public IGameLiftTaskWork
-{
-public:
-
-	void Publish(UObject* Context)
-	{
-		UGameLiftManager* Component = Cast<UGameLiftManager>(Context);
-		check(Component);
-
-		Publish(Component);
-	}
-
-	virtual void Publish(UGameLiftManager* Component) = 0;
-};
-
-
+#endif //WITH_GAMELIFT
 
 
 
@@ -144,37 +97,21 @@ public:
 UGameLiftManager::UGameLiftManager()
 {
 	bInitialized = false;
-	Callbacks = nullptr;
 	bGameSessionActive = false;
-
-	Pvt = MakeShareable(new FGameLiftPrivate);
-	Pvt->TaskManager = MakeShareable(new FGameLiftTaskManager);
 }
 
 void UGameLiftManager::Tick(float DeltaTime)
 {
-	if (bInitialized && Callbacks)
-	{
-		Callbacks->PollEvents();
-
-		if (bGameSessionActive)
-		{
-			GameSessionDuration += DeltaTime;
-		}
-	}
 }
 
 bool UGameLiftManager::IsTickable() const
 {
-	return (Pvt->TaskManager->GetTaskNum() > 0) || bInitialized;
+	return false;
 }
 
 void UGameLiftManager::Init()
 {
 	GameInstance = Cast<UGameInstance>(GetOuter());
-
-	Callbacks = new FGameLiftServerCallbacks(this);
-
 
 	const bool bEnabledByCommandLine = FParse::Param(FCommandLine::Get(), TEXT("GAMELIFT"));
 
@@ -192,13 +129,15 @@ void UGameLiftManager::Init()
 
 	if (GameInstance && GameInstance->IsDedicatedServerInstance() && bEnabledByCommandLine)
 	{
+#if WITH_GAMELIFT
 		auto InitOutcome = Aws::GameLift::Server::InitSDK();
 
 		UE_LOG(GameLiftLog, Log, TEXT("Gamelift Server initialized successfully"));
 		bInitialized = true;
 
 		FTimerHandle Handle;
-		GetWorld()->GetTimerManager().SetTimer(Handle, this, &UGameLiftManager::ProcessReady, 10.f, false);
+		GetWorld()->GetTimerManager().SetTimer(Handle, this, &UGameLiftManager::ProcessReady, 5.f, false);
+#endif
 	}
 
 	if (bInitialized == false)
@@ -214,6 +153,7 @@ void UGameLiftManager::ProcessReady()
 
 	if (bInitialized && bGameSessionActive == false)
 	{
+#if WITH_GAMELIFT
 		const int32 Port = FURL::UrlConfig.DefaultPort;
 
 		TArray<const char*> LogPaths;
@@ -237,6 +177,7 @@ void UGameLiftManager::ProcessReady()
 
 			UE_LOG(GameLiftLog, Warning, TEXT("GameLift::Server::ProcessReady failed: %s"), *Error);
 		}
+#endif
 	}
 }
 
@@ -249,17 +190,10 @@ void UGameLiftManager::Shutdown()
 {
 	if (bInitialized)
 	{
+#if WITH_GAMELIFT
 		Aws::GameLift::Server::Destroy();
+#endif
 	}	
-
-	if (Callbacks)
-	{
-		delete Callbacks;	
-		Callbacks = nullptr;
-	}	
-
-
-	Pvt->TaskManager->AbandonAllTasks();
 }
 
 class UWorld* UGameLiftManager::GetWorld() const
@@ -297,9 +231,6 @@ void UGameLiftManager::OnStartGameSession(const FGameLiftGameSession& GameSessio
 {
 	FString MapName = UGameLiftStatics::GetGameProperty(this, GameSession, GAMELIFT_PROPERTY_MAP);
 
-	//TODO FIX ME use a map whitelist and pretty much everything that is stored in game properties
-
-
 	FString Url;
 
 	Url += TEXT("?listen");
@@ -330,7 +261,7 @@ void UGameLiftManager::OnStartGameSession(const FGameLiftGameSession& GameSessio
 
 
 	FTimerHandle Handle;
-	GetWorld()->GetTimerManager().SetTimer(Handle, this, &UGameLiftManager::ActivateGameSession, 5, false);
+	GetWorld()->GetTimerManager().SetTimer(Handle, this, &UGameLiftManager::ActivateGameSession, 3.f, false);
 }
 
 bool UGameLiftManager::AcceptPlayerSession(const FString& Options, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
@@ -339,6 +270,7 @@ bool UGameLiftManager::AcceptPlayerSession(const FString& Options, const FUnique
 
 	if (bGameSessionActive)
 	{
+#if WITH_GAMELIFT
 		const FString PlayerSessionId = UGameplayStatics::ParseOption(Options, GAMELIFT_URL_PLAYER_SESSION_ID);
 
 		UE_LOG(GameLiftLog, Log, TEXT("GameLift::Server::AcceptPlayerSession with player session id %s"), *PlayerSessionId);
@@ -383,6 +315,7 @@ bool UGameLiftManager::AcceptPlayerSession(const FString& Options, const FUnique
 		}
 
 		return true;
+#endif
 	}
 
 	return false;
@@ -406,14 +339,17 @@ void UGameLiftManager::RemovePlayerSession(const FUniqueNetIdRepl& UniqueId)
 		ensure((*pSavedSessions).Num() == 1);
 		for (const FString& SessionId : (*pSavedSessions))
 		{
+#if WITH_GAMELIFT
 			Aws::GameLift::GenericOutcome ConnectOutcome = Aws::GameLift::Server::RemovePlayerSession(TCHAR_TO_ANSI(*SessionId));
 			PlayerSessions.Remove(UniqueIdStr);
+#endif
 		}
 	}
 }
 
 void UGameLiftManager::ActivateGameSession()
 {
+#if WITH_GAMELIFT
 	ensure(bGameSessionActive == false);
 	if (bGameSessionActive) return;
 
@@ -422,10 +358,12 @@ void UGameLiftManager::ActivateGameSession()
 
 	bGameSessionActive = Outcome.IsSuccess();
 	GameSessionDuration = 0.f;
+#endif
 }
 
 void UGameLiftManager::OnProcessTerminate()
 {
+#if WITH_GAMELIFT
 	UE_LOG(GameLiftLog, Log, TEXT("GameLift OnProcessTerminate, shutting down the server"));
 
 	Aws::GameLift::GenericOutcome Outcome = Aws::GameLift::Server::ProcessEnding();
@@ -450,13 +388,15 @@ void UGameLiftManager::OnProcessTerminate()
 
 
 	FTimerHandle Handle;
-	GetWorld()->GetTimerManager().SetTimer(Handle, this, &UGameLiftManager::ProcessEnding, 10.f, false);
+	GetWorld()->GetTimerManager().SetTimer(Handle, this, &UGameLiftManager::ProcessEnding, 5.f, false);
+#endif
 }
 
 void UGameLiftManager::TerminateGameSession()
 {
 	if (bGameSessionActive && bInitialized)
 	{
+#if WITH_GAMELIFT
 		UE_LOG(GameLiftLog, Log, TEXT("GameLift Terminating Game Session "));
 		Aws::GameLift::GenericOutcome Outcome = Aws::GameLift::Server::TerminateGameSession();
 		bGameSessionActive = false;
@@ -477,11 +417,13 @@ void UGameLiftManager::TerminateGameSession()
 
 		FTimerHandle Handle;
 		GetWorld()->GetTimerManager().SetTimer(Handle, this, &UGameLiftManager::ProcessReady, 5.f, false);
+#endif
 	}
 }
 
 void UGameLiftManager::ProcessEnding()
 {
+#if WITH_GAMELIFT
 	if (bInitialized)
 	{
 		Aws::GameLift::GenericOutcome Outcome = Aws::GameLift::Server::ProcessEnding();
@@ -489,10 +431,13 @@ void UGameLiftManager::ProcessEnding()
 		FTimerHandle Handle;
 		GetWorld()->GetTimerManager().SetTimer(Handle, this, &UGameLiftManager::RequestExit, 1.f, false);
 	}
+#endif
 }
 
 void UGameLiftManager::UpdatePlayerSessionCreationPolicy(EGameLiftPlayerSessionCreationPolicy Policy)
 {
+#if WITH_GAMELIFT
+
 	Aws::GameLift::Server::Model::PlayerSessionCreationPolicy NewPolicy = Aws::GameLift::Server::Model::PlayerSessionCreationPolicy::ACCEPT_ALL;
 
 	switch (Policy)
@@ -506,6 +451,7 @@ void UGameLiftManager::UpdatePlayerSessionCreationPolicy(EGameLiftPlayerSessionC
 	{
 		Aws::GameLift::GenericOutcome Outcome = Aws::GameLift::Server::UpdatePlayerSessionCreationPolicy(NewPolicy);
 	}
+#endif
 }
 
 

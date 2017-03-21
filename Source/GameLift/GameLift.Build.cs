@@ -63,7 +63,7 @@ public class GameLift : ModuleRules
 
             PrivateIncludePaths.Add(Path.Combine(BaseDirectory, "ThirdParty", "include"));
 
-            if (Target.Type == TargetRules.TargetType.Server || true)
+            if (Target.Type == TargetRules.TargetType.Server)
             {
                 Definitions.Add("WITH_GAMELIFT=1");
 

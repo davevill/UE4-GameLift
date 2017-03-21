@@ -21,7 +21,6 @@ class GAMELIFT_API UGameLiftManager : public UObject, public FTickableGameObject
 	bool bInitialized;
 	bool bGameSessionActive;
 
-	class FGameLiftServerCallbacks* Callbacks;
 
 	/* Unique ID as a string to session id */
 	TMap<FString, TArray<FString>> PlayerSessions;
@@ -32,21 +31,6 @@ class GAMELIFT_API UGameLiftManager : public UObject, public FTickableGameObject
 
 	UFUNCTION()
 	void RequestExit();
-
-
-	//Client properties
-
-	UPROPERTY(Config)
-	FString AccessKeyId;
-
-	UPROPERTY(Config)
-	FString SecretAccessKey;
-
-	UPROPERTY(Config)
-	bool bCognitoEnabled;
-
-	// we dont expose any direct aws stuff
-	class TSharedPtr<class FGameLiftPrivate> Pvt;
 
 
 public:
