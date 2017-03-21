@@ -14,6 +14,7 @@ void* FGameLiftModule::LibraryHandle = nullptr;
 void FGameLiftModule::StartupModule()
 {
 #if PLATFORM_WINDOWS
+#if WITH_GAMELIFT
 	FString BaseDir = IPluginManager::Get().FindPlugin("GameLift")->GetBaseDir();
 	const FString SDKDir = FPaths::Combine(*BaseDir, TEXT("ThirdParty"), TEXT("gamelift-server-sdk"), TEXT("lib"));
 	const FString LibName = TEXT("aws-cpp-sdk-gamelift-server");
@@ -24,6 +25,7 @@ void FGameLiftModule::StartupModule()
 		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT(LOCTEXT_NAMESPACE, "Failed to load aws-cpp-sdk-gamelift-server library. Plug-in will not be functional."));
 		FreeDependency(LibraryHandle);
 	}
+#endif
 #endif
 }
 
@@ -49,12 +51,14 @@ bool FGameLiftModule::LoadDependency(const FString& Dir, const FString& Name, vo
 
 void FGameLiftModule::FreeDependency(void*& Handle)
 {
+#if WITH_GAMELIFT
 #if !PLATFORM_LINUX
 	if (Handle != nullptr)
 	{
 		FPlatformProcess::FreeDllHandle(Handle);
 		Handle = nullptr;
 	}
+#endif
 #endif
 }
 
