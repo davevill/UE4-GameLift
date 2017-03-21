@@ -9,13 +9,18 @@
 
 class FGameLiftModule : public IModuleInterface
 {
+
+	static void* LibraryHandle;
+
 public:
 
 
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
 
-
+protected:
+	bool LoadDependency(const FString& Dir, const FString& Name, void*& Handle);
+	void FreeDependency(void*& Handle);
 
 };
 

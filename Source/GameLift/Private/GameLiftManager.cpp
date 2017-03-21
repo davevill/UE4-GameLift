@@ -8,22 +8,27 @@
 //#define _HAS_EXCEPTIONS 0
 #pragma warning( push )
 #pragma warning( disable : 4530)
+#pragma warning( disable : 4996)
 
+//#include "aws/gamelift/server/GameLiftServerAPI.h"
+
+
+#if PLATFORM_WINDOWS
+#include "AllowWindowsPlatformTypes.h"
+#endif
+
+#include "aws/gamelift/common/Outcome.h"
 #include "aws/gamelift/server/GameLiftServerAPI.h"
+#include <aws/gamelift/server/model/GameSession.h>
+#include <aws/gamelift/server/model/GameProperty.h>
+#include <map>
+#include <vector>
+#include <string>
 
-#include <aws/core/Aws.h>
-#include <aws/gameLift/GameLiftClient.h>
-#include <aws/gameLift/model/CreateGameSessionRequest.h>
-#include <aws/gameLift/model/CreateGameSessionResult.h>
-#include <aws/gameLift/model/DescribeGameSessionsRequest.h>
-#include <aws/gameLift/model/DescribeGameSessionsResult.h>
-#include <aws/gameLift/model/SearchGameSessionsRequest.h>
-#include <aws/gameLift/model/SearchGameSessionsResult.h>
-#include <aws/gameLift/model/CreatePlayerSessionsRequest.h>
-#include <aws/gameLift/model/CreatePlayerSessionsResult.h>
-#include <aws/core/auth/AWSCredentialsProvider.h>
-#include <aws/core/utils/Outcome.h>
-#include <aws/gamelift/GameLiftErrors.h>
+#if PLATFORM_WINDOWS
+#include "HideWindowsPlatformTypes.h"
+#endif
+
 
 #pragma warning( pop ) 
 
@@ -36,8 +41,10 @@
 #define GAMELIFT_EVENT_ON_PROCESS_TERMINATE 2
 
 
+
 class FGameLiftServerCallbacks
 {
+
 	TWeakObjectPtr<UGameLiftManager> Manager;
 
 	Aws::GameLift::Server::Model::GameSession StoredGameSession;
@@ -51,68 +58,55 @@ public:
 	{
 	}
 
-	void OnStartGameSession(Aws::GameLift::Server::Model::GameSession GameSession)
-	{
-		//Store a copy
-		StoredGameSession = GameSession;
-		EventQueue.Enqueue(GAMELIFT_EVENT_ON_START_GAME_SESSION);
-	}
-
-	void OnProcessTerminate()
-	{
-		EventQueue.Enqueue(GAMELIFT_EVENT_ON_PROCESS_TERMINATE);
-	}
-
-	bool OnHealthCheck()
-	{
-		//Not implemented yet 
-		return true;
-	}
-
 	void PollEvents()
 	{
-		int32 Event;
-
-		if (EventQueue.Dequeue(Event))
-		{
-			switch (Event)
-			{
-			case GAMELIFT_EVENT_ON_START_GAME_SESSION:
-				{
-					const std::vector<Aws::GameLift::Server::Model::GameProperty>& Properties = StoredGameSession.GetGameProperties();
-
-					check(Manager.IsValid());
-
-					FGameLiftGameSession UnrealGameSession;
-
-					UnrealGameSession.SessionId = StoredGameSession.GetGameSessionId().c_str();
-					UnrealGameSession.MaxPlayers = StoredGameSession.GetMaximumPlayerSessionCount();
-
-					for (int32 i = 0; i < Properties.size(); i++)
-					{
-						const Aws::GameLift::Server::Model::GameProperty& Property = Properties[i];
-
-						FGameLiftProperty UnrealProperty;
-						UnrealProperty.Key = Property.GetKey().c_str();
-						UnrealProperty.Value = Property.GetValue().c_str();
-
-						UnrealGameSession.Properties.Add(UnrealProperty);
-					}
-
-					Manager->OnStartGameSession(UnrealGameSession);
-				}
-				break;
-			case GAMELIFT_EVENT_ON_PROCESS_TERMINATE:
-				{
-					Manager->OnProcessTerminate();
-				}
-			};
-
-		}
-
+		//deprecated
 	}
 
 };
+
+
+void OnActivateFunctionInternal(Aws::GameLift::Server::Model::GameSession GameSession, void* State)
+{
+	UGameLiftManager* Manager = (UGameLiftManager*)State;
+	check(Manager);
+
+	int NumProperties = 0;
+	auto Properties = GameSession.GetGameProperties(NumProperties);
+
+	FGameLiftGameSession UnrealGameSession;
+
+	UnrealGameSession.SessionId = GameSession.GetGameSessionId();
+	UnrealGameSession.MaxPlayers = GameSession.GetMaximumPlayerSessionCount();
+
+
+
+	for (int32 i = 0; i < NumProperties; i++)
+	{
+		const Aws::GameLift::Server::Model::GameProperty& Property = Properties[i];
+
+		FGameLiftProperty UnrealProperty;
+		UnrealProperty.Key = Property.GetKey();
+		UnrealProperty.Value = Property.GetValue();
+
+		UnrealGameSession.Properties.Add(UnrealProperty);
+	}
+
+	Manager->OnStartGameSession(UnrealGameSession);
+}
+
+void OnTerminateFunctionInternal(void* State)
+{
+	UGameLiftManager* Manager = (UGameLiftManager*)State;
+	check(Manager);
+
+	Manager->OnProcessTerminate();
+}
+
+bool OnHealthCheckInternal(void* State)
+{
+	return true;
+}
 
 
 
@@ -120,31 +114,8 @@ class FGameLiftPrivate
 {
 public:
 
-	TSharedPtr<Aws::GameLift::GameLiftClient> Client;
-
-	Aws::Auth::AWSCredentials Credentials;
-
 	TSharedPtr<FGameLiftTaskManager> TaskManager;
 
-	Aws::Client::ClientConfiguration SetupClientConfiguration(EGameLiftRegion Region)
-	{
-		Aws::Client::ClientConfiguration ClientConfiguration;
-
-		const char* RegionStr = Aws::Region::US_EAST_1;
-
-		switch (Region)
-		{
-		case EGameLiftRegion::USEast1:      RegionStr = Aws::Region::US_EAST_1; break;
-		case EGameLiftRegion::USWest2:      RegionStr = Aws::Region::US_WEST_2; break;
-		case EGameLiftRegion::AsiaPacific1: RegionStr = Aws::Region::AP_NORTHEAST_1; break;
-		case EGameLiftRegion::EUWest1:      RegionStr = Aws::Region::EU_WEST_1; break;
-		case EGameLiftRegion::EUCentral1:   RegionStr = Aws::Region::EU_CENTRAL_1; break;
-		};
-
-		ClientConfiguration.region = RegionStr;
-
-		return ClientConfiguration;
-	}
 };
 
 
@@ -152,8 +123,6 @@ public:
 class FGameLiftAPITaskWork : public IGameLiftTaskWork
 {
 public:
-
-	Aws::GameLift::GameLiftClient Client;
 
 	void Publish(UObject* Context)
 	{
@@ -193,8 +162,6 @@ void UGameLiftManager::Tick(float DeltaTime)
 			GameSessionDuration += DeltaTime;
 		}
 	}
-
-	Pvt->TaskManager->Tick(this);
 }
 
 bool UGameLiftManager::IsTickable() const
@@ -225,7 +192,7 @@ void UGameLiftManager::Init()
 
 	if (GameInstance && GameInstance->IsDedicatedServerInstance() && bEnabledByCommandLine)
 	{
-		Aws::GameLift::Server::InitSDKOutcome InitOutcome = Aws::GameLift::Server::InitSDK();
+		auto InitOutcome = Aws::GameLift::Server::InitSDK();
 
 		UE_LOG(GameLiftLog, Log, TEXT("Gamelift Server initialized successfully"));
 		bInitialized = true;
@@ -238,37 +205,35 @@ void UGameLiftManager::Init()
 	{
 		UE_LOG(GameLiftLog, Log, TEXT("Gamelift Server didn't initialized or its disabled"));
 	}
-
-	Pvt->Credentials.SetAWSAccessKeyId(TCHAR_TO_ANSI(*AccessKeyId));
-	Pvt->Credentials.SetAWSSecretKey(TCHAR_TO_ANSI(*SecretAccessKey));
 }
 
 void UGameLiftManager::ProcessReady()
 {
 	ensure(bInitialized);
 	ensure(bGameSessionActive == false);
+
 	if (bInitialized && bGameSessionActive == false)
 	{
 		const int32 Port = FURL::UrlConfig.DefaultPort;
 
-		std::vector<std::string> LogPaths;
-		LogPaths.push_back(TCHAR_TO_ANSI(*FPaths::GameLogDir()));
+		TArray<const char*> LogPaths;
+		LogPaths.Add(TCHAR_TO_ANSI(*FPaths::GameLogDir()));
 
-		Aws::GameLift::Server::ProcessParameters ProcessReadyParameter = Aws::GameLift::Server::ProcessParameters(
-			std::bind(&FGameLiftServerCallbacks::OnStartGameSession, Callbacks, std::placeholders::_1),
-			std::bind(&FGameLiftServerCallbacks::OnProcessTerminate, Callbacks),
-			std::bind(&FGameLiftServerCallbacks::OnHealthCheck, Callbacks),
+		auto ProcessReadyParameter = Aws::GameLift::Server::ProcessParameters(
+			OnActivateFunctionInternal, this,
+			OnTerminateFunctionInternal, this,
+			OnHealthCheckInternal, this,
 			Port,
-			Aws::GameLift::Server::LogParameters(LogPaths)
+			Aws::GameLift::Server::LogParameters(LogPaths.GetData(), LogPaths.Num())
 		);
 
 		UE_LOG(GameLiftLog, Log, TEXT("GameLift::Server::ProcessReady with port %d"), Port);
 
-		Aws::GameLift::GenericOutcome Outcome = Aws::GameLift::Server::ProcessReady(ProcessReadyParameter);
+		auto Outcome = Aws::GameLift::Server::ProcessReady(ProcessReadyParameter);
 
 		if (!Outcome.IsSuccess())
 		{
-			FString Error = Outcome.GetError().GetErrorMessage().c_str();
+			FString Error = Outcome.GetError().GetErrorMessage();
 
 			UE_LOG(GameLiftLog, Warning, TEXT("GameLift::Server::ProcessReady failed: %s"), *Error);
 		}
@@ -364,7 +329,8 @@ void UGameLiftManager::OnStartGameSession(const FGameLiftGameSession& GameSessio
 	UGameplayStatics::OpenLevel(this, *MapName, true, Url);
 
 
-	GetWorld()->GetTimerManager().SetTimerForNextTick(this, &UGameLiftManager::ActivateGameSession);
+	FTimerHandle Handle;
+	GetWorld()->GetTimerManager().SetTimer(Handle, this, &UGameLiftManager::ActivateGameSession, 5, false);
 }
 
 bool UGameLiftManager::AcceptPlayerSession(const FString& Options, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
@@ -384,7 +350,7 @@ bool UGameLiftManager::AcceptPlayerSession(const FString& Options, const FUnique
 			//We dont want to send the gamelift error messages to users, just log it in the backend
 			ErrorMessage = TEXT("Internal error");
 
-			const FString LogErrorMessage = ConnectOutcome.GetError().GetErrorMessage().c_str();
+			const FString LogErrorMessage = ConnectOutcome.GetError().GetErrorMessage();
 
 			UE_LOG(GameLiftLog, Warning, TEXT("GameLift::Server::AcceptPlayerSession failed with error %s"), *LogErrorMessage);
 			return false;
@@ -392,16 +358,29 @@ bool UGameLiftManager::AcceptPlayerSession(const FString& Options, const FUnique
 
 		const FString UniqueIdStr = UniqueId.ToString();
 
-		const FString* pPlayerSessionId = PlayerSessions.Find(UniqueIdStr);
-
-		if (pPlayerSessionId)
+		if (PlayerSessions.Find(UniqueIdStr))
 		{
-			UE_LOG(GameLiftLog, Warning, TEXT("GameLift AcceptPlayerSession UniqueId %s is already in the server, droping connection"), *UniqueIdStr);
+			UE_LOG(GameLiftLog, Warning, TEXT("GameLift AcceptPlayerSession UniqueId %s has multiple sessions ids, checking for duplicates"), *UniqueIdStr);
+		}
+
+		
+		TArray<FString>& SavedSessions = PlayerSessions.Add(UniqueIdStr);
+
+		if (SavedSessions.Find(PlayerSessionId) == INDEX_NONE)
+		{
+			//Remove all other player sessions, that could left over due to a crash
+			for (const FString& SessionId : SavedSessions)
+			{
+				Aws::GameLift::GenericOutcome ConnectOutcome = Aws::GameLift::Server::RemovePlayerSession(TCHAR_TO_ANSI(*SessionId));
+			}
+
+			SavedSessions.Add(PlayerSessionId);
+		}
+		else
+		{
+			UE_LOG(GameLiftLog, Warning, TEXT("GameLift AcceptPlayerSession UniqueId %s has a duplicate player session, dropping connection"), *UniqueIdStr);
 			return false;
 		}
-		
-		FString& SavedSessionId = PlayerSessions.Add(UniqueIdStr);
-		SavedSessionId = PlayerSessionId;
 
 		return true;
 	}
@@ -412,18 +391,25 @@ bool UGameLiftManager::AcceptPlayerSession(const FString& Options, const FUnique
 void UGameLiftManager::RemovePlayerSession(const FUniqueNetIdRepl& UniqueId)
 {
 	const FString UniqueIdStr = UniqueId.ToString();
-	const FString* pPlayerSessionId = PlayerSessions.Find(UniqueId.ToString());
+
+	const TArray<FString>* pSavedSessions = PlayerSessions.Find(UniqueId.ToString());
 
 	//if a player joined with an unique id, it gotta leave with the same id
-	ensure(pPlayerSessionId != nullptr);
-	if (!pPlayerSessionId)
+	ensure(pSavedSessions != nullptr);
+
+	if (!pSavedSessions)
 	{
 		UE_LOG(GameLiftLog, Warning, TEXT("GameLift::Server::RemovePlayerSession UniqueId not found %s"), *UniqueIdStr);
-		return;
 	}
-
-	Aws::GameLift::GenericOutcome ConnectOutcome = Aws::GameLift::Server::RemovePlayerSession(TCHAR_TO_ANSI(*(*pPlayerSessionId)));
-	PlayerSessions.Remove(UniqueIdStr);
+	else
+	{
+		ensure((*pSavedSessions).Num() == 1);
+		for (const FString& SessionId : (*pSavedSessions))
+		{
+			Aws::GameLift::GenericOutcome ConnectOutcome = Aws::GameLift::Server::RemovePlayerSession(TCHAR_TO_ANSI(*SessionId));
+			PlayerSessions.Remove(UniqueIdStr);
+		}
+	}
 }
 
 void UGameLiftManager::ActivateGameSession()
@@ -474,9 +460,20 @@ void UGameLiftManager::TerminateGameSession()
 		UE_LOG(GameLiftLog, Log, TEXT("GameLift Terminating Game Session "));
 		Aws::GameLift::GenericOutcome Outcome = Aws::GameLift::Server::TerminateGameSession();
 		bGameSessionActive = false;
-		
-		//Loads the default map
-		UGameplayStatics::OpenLevel(this, "ServerIdle", true);
+
+
+		AGameModeBase* GameMode = UGameplayStatics::GetGameMode(GameInstance);
+
+		ensure(GameMode);
+
+		//Kick everyone before switching to idle map
+		if (GameMode)
+		{
+			for (TActorIterator<APlayerController> Itr(GameInstance->GetWorld()); Itr; ++Itr)
+			{
+				GameMode->GameSession->KickPlayer(*Itr, FText::FromString(TEXT("Game session ended")));
+			}
+		}
 
 		FTimerHandle Handle;
 		GetWorld()->GetTimerManager().SetTimer(Handle, this, &UGameLiftManager::ProcessReady, 5.f, false);
@@ -512,297 +509,3 @@ void UGameLiftManager::UpdatePlayerSessionCreationPolicy(EGameLiftPlayerSessionC
 }
 
 
-
-// Client code
-
-
-
-static void AWSGameSessionToUnreal(const Aws::GameLift::Model::GameSession& AWSGameSession, FGameLiftGameSession& GameSession)
-{
-	GameSession.SessionId = AWSGameSession.GetGameSessionId().c_str();
-	GameSession.MaxPlayers = AWSGameSession.GetMaximumPlayerSessionCount();
-
-	const std::vector<Aws::GameLift::Model::GameProperty>& Properties = AWSGameSession.GetGameProperties();
-
-	for (int32 i = 0; i < Properties.size(); i++)
-	{
-		const Aws::GameLift::Model::GameProperty& Property = Properties[i];
-
-		FGameLiftProperty UnrealProperty;
-		UnrealProperty.Key = Property.GetKey().c_str();
-		UnrealProperty.Value = Property.GetValue().c_str();
-
-		GameSession.Properties.Add(UnrealProperty);
-	}
-
-	GameSession.IpAddress = AWSGameSession.GetIpAddress().c_str();
-	GameSession.Port = AWSGameSession.GetPort();
-	GameSession.Players = AWSGameSession.GetCurrentPlayerSessionCount();
-
-	GameSession.PlayerSessionCreationPolicy = EGameLiftPlayerSessionCreationPolicy::AcceptAll;
-
-	switch (AWSGameSession.GetPlayerSessionCreationPolicy())
-	{
-	case Aws::GameLift::Model::PlayerSessionCreationPolicy::ACCEPT_ALL: GameSession.PlayerSessionCreationPolicy = EGameLiftPlayerSessionCreationPolicy::AcceptAll; break;
-	case Aws::GameLift::Model::PlayerSessionCreationPolicy::DENY_ALL:   GameSession.PlayerSessionCreationPolicy = EGameLiftPlayerSessionCreationPolicy::DenyAll; break;
-	}
-}
-
-
-
-//CreateGameSession
-class FGameLiftCreateGameSessionTaskWork : public FGameLiftAPITaskWork
-{
-public:
-
-	Aws::GameLift::Model::CreateGameSessionRequest Request;
-	Aws::GameLift::Model::CreateGameSessionOutcome Outcome;
-
-	FGameLiftOnCreateGameSessionDelegate Callback;
-
-	void DoWork()
-	{
-		Outcome = Client.CreateGameSession(Request);
-
-		//Now wait for the gamesession to become active
-		if (Outcome.IsSuccess())
-		{
-			Aws::GameLift::Model::DescribeGameSessionsRequest DescribeRequest;
-
-			DescribeRequest.SetGameSessionId(Outcome.GetResult().GetGameSession().GetGameSessionId());
-
-			//wait 120 seconds for the game session to be active
-			for (int32 i = 0; i < 10; i++)
-			{
-				Aws::GameLift::Model::DescribeGameSessionsOutcome ActivateOutcome = Client.DescribeGameSessions(DescribeRequest);
-
-				if (ActivateOutcome.IsSuccess() && ActivateOutcome.GetResult().GetGameSessions().size() > 0)
-				{
-					if (ActivateOutcome.GetResult().GetGameSessions()[0].GetStatus() == Aws::GameLift::Model::GameSessionStatus::ACTIVE)
-					{
-						break;
-					}
-				}
-
-				FPlatformProcess::Sleep(5.f);
-			}
-
-			//Then wait 5 seconds for it to be fully available
-			FPlatformProcess::Sleep(1.f);
-		}
-	}
-
-	void Publish(UGameLiftManager* Component)
-	{
-		FGameLiftGameSession GameSession;
-
-		bool bSucceed = Outcome.IsSuccess();
-
-		if (bSucceed)
-		{
-			Aws::GameLift::Model::CreateGameSessionResult Result = Outcome.GetResult();
-
-			AWSGameSessionToUnreal(Result.GetGameSession(), GameSession);
-
-		}
-		else
-		{
-			UE_LOG(GameLiftLog, Warning, TEXT("GameLift CreateGameSession failed: %s"), *FString(Outcome.GetError().GetMessage().c_str()));
-		}
-
-		Callback.ExecuteIfBound(bSucceed, GameSession);
-	};
-};
-
-void UGameLiftManager::CreateGameSession(int32 MaxPlayers, TArray<FGameLiftProperty> GameProperties, FGameLiftFleet Fleet, const FGameLiftOnCreateGameSessionDelegate& Callback)
-{
-	FGameLiftCreateGameSessionTaskWork* TaskWork = new FGameLiftCreateGameSessionTaskWork();
-	TaskWork->Callback = Callback;
-
-	Aws::Client::ClientConfiguration ClientConfiguration = Pvt->SetupClientConfiguration(Region);
-
-	TaskWork->Client = Aws::GameLift::GameLiftClient(Pvt->Credentials, ClientConfiguration);
-
-	if (Fleet.bAlias)
-	{
-		TaskWork->Request.SetAliasId(TCHAR_TO_ANSI(*Fleet.Id.ToString()));
-	}
-	else
-	{
-		TaskWork->Request.SetFleetId(TCHAR_TO_ANSI(*Fleet.Id.ToString()));
-	}
-
-	TaskWork->Request.SetMaximumPlayerSessionCount(MaxPlayers);
-
-	for (int32 i = 0; i < GameProperties.Num(); i++)
-	{
-		const FGameLiftProperty& Property = GameProperties[i];
-
-		Aws::GameLift::Model::GameProperty GameLiftProperty;
-
-		GameLiftProperty.SetKey(TCHAR_TO_ANSI(*Property.Key.ToString()));
-		GameLiftProperty.SetValue(TCHAR_TO_ANSI(*Property.Value));
-
-		TaskWork->Request.AddGameProperties(GameLiftProperty);
-	}
-
-	Pvt->TaskManager->RegisterTask(TaskWork);
-}
-
-
-
-
-
-//CreatePlayerSessions
-class FGameLiftCreatePlayerSessionsTaskWork : public FGameLiftAPITaskWork
-{
-public:
-
-	Aws::GameLift::Model::CreatePlayerSessionsRequest Request;
-	Aws::GameLift::Model::CreatePlayerSessionsOutcome Outcome;
-
-	FGameLiftOnCreatePlayerSessionsDelegate Callback;
-
-	void DoWork()
-	{
-		Outcome = Client.CreatePlayerSessions(Request);
-	}
-
-	void Publish(UGameLiftManager* Component)
-	{
-		TArray<FGameLiftPlayerSession> PlayerSessions;
-
-		bool bSucceed = Outcome.IsSuccess();
-
-		if (bSucceed)
-		{
-			Aws::GameLift::Model::CreatePlayerSessionsResult Result = Outcome.GetResult();
-
-			const Aws::Vector<Aws::GameLift::Model::PlayerSession>& AWSPlayerSessions = Result.GetPlayerSessions();
-
-			for (int32 i = 0; i < AWSPlayerSessions.size(); i++)
-			{
-				const Aws::GameLift::Model::PlayerSession& AWSPlayerSession = AWSPlayerSessions[i];
-
-				FGameLiftPlayerSession PlayerSession;
-				PlayerSession.PlayerSessionId = AWSPlayerSession.GetPlayerSessionId().c_str();
-				PlayerSession.GameSessionId = AWSPlayerSession.GetGameSessionId().c_str();
-				PlayerSession.PlayerId = AWSPlayerSession.GetPlayerId().c_str();
-
-				PlayerSessions.Add(PlayerSession);
-			}
-		}
-		else
-		{
-			UE_LOG(GameLiftLog, Warning, TEXT("GameLift CreatePlayerSessions failed: %s"), *FString(Outcome.GetError().GetMessage().c_str()));
-		}
-
-
-		Callback.ExecuteIfBound(bSucceed, PlayerSessions);
-
-	};
-};
-
-void UGameLiftManager::CreatePlayerSessions(const FString& GameSessionId, const TArray<FString>& PlayerIds, const FGameLiftOnCreatePlayerSessionsDelegate& Callback)
-{
-	FGameLiftCreatePlayerSessionsTaskWork* TaskWork = new FGameLiftCreatePlayerSessionsTaskWork();
-	TaskWork->Callback = Callback;
-
-	Aws::Client::ClientConfiguration ClientConfiguration = Pvt->SetupClientConfiguration(Region);
-
-	TaskWork->Client = Aws::GameLift::GameLiftClient(Pvt->Credentials, ClientConfiguration);
-
-	Aws::Vector<Aws::String> AWSPlayerIds;
-
-	for (int32 i = 0; i < PlayerIds.Num(); i++)
-	{
-		AWSPlayerIds.push_back(TCHAR_TO_ANSI(*PlayerIds[i]));
-	}
-
-	TaskWork->Request.SetGameSessionId(TCHAR_TO_ANSI(*GameSessionId));
-	TaskWork->Request.SetPlayerIds(AWSPlayerIds);
-
-	Pvt->TaskManager->RegisterTask(TaskWork);
-}
-
-
-
-
-
-
-
-//CreateGameSession
-class FGameLiftSearchGameSessionsTaskWork : public FGameLiftAPITaskWork
-{
-public:
-
-	Aws::GameLift::Model::SearchGameSessionsRequest Request;
-	Aws::GameLift::Model::SearchGameSessionsOutcome Outcome;
-
-	bool bOnlyAcceptingPlayers;
-
-	FGameLiftOnSearchGameSessionsDelegate Callback;
-
-	void DoWork()
-	{
-		Outcome = Client.SearchGameSessions(Request);
-	}
-
-	void Publish(UGameLiftManager* Component)
-	{
-		TArray<FGameLiftGameSession> GameSessions;
-
-		bool bSucceed = Outcome.IsSuccess();
-
-		if (bSucceed)
-		{
-			Aws::GameLift::Model::SearchGameSessionsResult Result = Outcome.GetResult();
-
-			const Aws::Vector<Aws::GameLift::Model::GameSession>& AWSGameSessions = Result.GetGameSessions();
-
-			for (int32 i = 0; i < AWSGameSessions.size(); i++)
-			{
-				FGameLiftGameSession GameSession;
-
-				AWSGameSessionToUnreal(AWSGameSessions[i], GameSession);
-
-				if (bOnlyAcceptingPlayers && GameSession.PlayerSessionCreationPolicy != EGameLiftPlayerSessionCreationPolicy::AcceptAll)
-				{
-					continue;
-				}
-
-				GameSessions.Add(GameSession);
-			}
-		}
-		else
-		{
-			UE_LOG(GameLiftLog, Warning, TEXT("GameLift SearchGameSessions failed: %s"), *FString(Outcome.GetError().GetMessage().c_str()));
-		}
-
-		Callback.ExecuteIfBound(bSucceed, GameSessions);
-	};
-};
-
-void UGameLiftManager::SearchGameSessions(const FString& FilterExpression, const FString& SortExpression, bool bOnlyAcceptingPlayers, FGameLiftFleet Fleet, const FGameLiftOnSearchGameSessionsDelegate& Callback)
-{
-	FGameLiftSearchGameSessionsTaskWork* TaskWork = new FGameLiftSearchGameSessionsTaskWork();
-	TaskWork->Callback = Callback;
-
-	Aws::Client::ClientConfiguration ClientConfiguration = Pvt->SetupClientConfiguration(Region);
-
-	TaskWork->Client = Aws::GameLift::GameLiftClient(Pvt->Credentials, ClientConfiguration);
-	TaskWork->Request.SetFilterExpression(TCHAR_TO_ANSI(*FilterExpression));
-	TaskWork->Request.SetSortExpression(TCHAR_TO_ANSI(*SortExpression));
-	TaskWork->bOnlyAcceptingPlayers = bOnlyAcceptingPlayers;
-
-	if (Fleet.bAlias)
-	{
-		TaskWork->Request.SetAliasId(TCHAR_TO_ANSI(*Fleet.Id.ToString()));
-	}
-	else
-	{
-		TaskWork->Request.SetFleetId(TCHAR_TO_ANSI(*Fleet.Id.ToString()));
-	}
-
-	Pvt->TaskManager->RegisterTask(TaskWork);
-}

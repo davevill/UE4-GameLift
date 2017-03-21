@@ -11,15 +11,6 @@
 
 
 
-DECLARE_DYNAMIC_DELEGATE_TwoParams(FGameLiftOnCreateGameSessionDelegate, bool, bSucceed, const FGameLiftGameSession&, GameSession);
-DECLARE_DYNAMIC_DELEGATE_TwoParams(FGameLiftOnCreatePlayerSessionsDelegate, bool, bSucceed, const TArray<FGameLiftPlayerSession>&, PlayerSessions);
-DECLARE_DYNAMIC_DELEGATE_TwoParams(FGameLiftOnSearchGameSessionsDelegate, bool, bSucceed, const TArray<FGameLiftGameSession>&, GameSessions);
-
-
-
-
-
-
 /* Must be created from within a GameInstance object otherwise it wont initialize */
 UCLASS(Config=Game)
 class GAMELIFT_API UGameLiftManager : public UObject, public FTickableGameObject
@@ -33,7 +24,7 @@ class GAMELIFT_API UGameLiftManager : public UObject, public FTickableGameObject
 	class FGameLiftServerCallbacks* Callbacks;
 
 	/* Unique ID as a string to session id */
-	TMap<FString, FString> PlayerSessions;
+	TMap<FString, TArray<FString>> PlayerSessions;
 
 	UPROPERTY()
 	class UGameInstance* GameInstance;
@@ -99,6 +90,7 @@ public:
 
 
 
+
 	/** Return true if this is running on AWS GameLift fleet */
 	UFUNCTION(BlueprintPure, Category="GameLift")
 	bool IsFleetInstance() const;
@@ -140,22 +132,6 @@ public:
 
 
 
-
-
-
-
-	/** Client: Creates a game session  */
-	UFUNCTION(BlueprintCallable, Category="GameLift")
-	void CreateGameSession(int32 MaxPlayers, TArray<FGameLiftProperty> GameProperties, FGameLiftFleet Fleet, const FGameLiftOnCreateGameSessionDelegate& Callback);
-
-
-	/** Client: Creates player sessions, can be used for a single one */
-	UFUNCTION(BlueprintCallable, Category="GameLift")
-	void CreatePlayerSessions(const FString& GameSessionId, const TArray<FString>& PlayerIds, const FGameLiftOnCreatePlayerSessionsDelegate& Callback);
-
-	/** Client: Search for game sessions, if bOnlyAcceptingPlayers is true, will flter all game sessions with Policy != ACCEPT_ALL */
-	UFUNCTION(BlueprintCallable, Category="GameLift")
-	void SearchGameSessions(const FString& FilterExpression, const FString& SortExpression, bool bOnlyAcceptingPlayers, FGameLiftFleet Fleet, const FGameLiftOnSearchGameSessionsDelegate& Callback);
 
 
 

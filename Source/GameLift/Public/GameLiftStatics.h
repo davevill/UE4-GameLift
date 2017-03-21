@@ -6,7 +6,7 @@
 
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "GameLiftTypes.h"
-#include "GameliftStatics.generated.h"
+#include "GameLiftStatics.generated.h"
 
 
 

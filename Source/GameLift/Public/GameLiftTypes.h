@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "GameliftTypes.generated.h"
+#include "GameLiftTypes.generated.h"
 
 
 

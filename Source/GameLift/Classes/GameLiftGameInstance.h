@@ -5,7 +5,7 @@
 #pragma once
 
 #include "Engine/GameInstance.h"
-#include "GameliftGameInstance.generated.h"
+#include "GameLiftGameInstance.generated.h"
 
 
 

@@ -12,6 +12,9 @@
 class IGameLiftTaskWork
 {
 public:
+
+	virtual ~IGameLiftTaskWork() {}
+
 	/** Called after the task is completed on the game thread */
 	virtual void Publish(UObject* Context) = 0;
 
