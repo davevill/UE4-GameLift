@@ -260,8 +260,7 @@ void UGameLiftManager::OnStartGameSession(const FGameLiftGameSession& GameSessio
 	UGameplayStatics::OpenLevel(this, *MapName, true, Url);
 
 
-	FTimerHandle Handle;
-	GetWorld()->GetTimerManager().SetTimer(Handle, this, &UGameLiftManager::ActivateGameSession, 3.f, false);
+	ActivateGameSession();
 }
 
 bool UGameLiftManager::AcceptPlayerSession(const FString& Options, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
@@ -387,8 +386,7 @@ void UGameLiftManager::OnProcessTerminate()
 	}
 
 
-	FTimerHandle Handle;
-	GetWorld()->GetTimerManager().SetTimer(Handle, this, &UGameLiftManager::ProcessEnding, 5.f, false);
+	ProcessEnding();
 #endif
 }
 
@@ -415,8 +413,7 @@ void UGameLiftManager::TerminateGameSession()
 			}
 		}
 
-		FTimerHandle Handle;
-		GetWorld()->GetTimerManager().SetTimer(Handle, this, &UGameLiftManager::ProcessReady, 5.f, false);
+		ProcessReady();
 #endif
 	}
 }
@@ -428,8 +425,7 @@ void UGameLiftManager::ProcessEnding()
 	{
 		Aws::GameLift::GenericOutcome Outcome = Aws::GameLift::Server::ProcessEnding();
 
-		FTimerHandle Handle;
-		GetWorld()->GetTimerManager().SetTimer(Handle, this, &UGameLiftManager::RequestExit, 1.f, false);
+		UGameLiftManager::RequestExit();
 	}
 #endif
 }
